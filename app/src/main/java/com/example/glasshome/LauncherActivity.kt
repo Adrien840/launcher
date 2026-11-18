@@ -293,16 +293,19 @@ private fun HomeContent(
     onCompact: (Boolean) -> Unit
 ) {
     val presetColors = wallpaperPresets[preset.coerceIn(wallpaperPresets.indices)].colors
+    val shortcuts = remember(apps) { chooseDockApps(apps) }
+    val filtered = remember(apps, query) { apps.filter { it.label.contains(query.trim(), true) } }
+    var activePage by remember { mutableIntStateOf(0) }
+
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.linearGradient(presetColors, start = androidx.compose.ui.geometry.Offset.Zero, end = androidx.compose.ui.geometry.Offset(900f, 1600f)))
+        Modifier.fillMaxSize()
+            .background(Brush.linearGradient(presetColors))
             .then(if (!showDrawer) Modifier.pointerInput(Unit) {
                 var drag = 0f
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, amount ->
                         drag += amount
-                        if (abs(drag) > 76f && drag < 0f) {
+                        if (drag < -65f) {
                             onDrawerChange(true)
                             drag = 0f
                             change.consume()
@@ -314,76 +317,148 @@ private fun HomeContent(
             } else Modifier)
     ) {
         if (photo != null) {
-            Image(bitmap = photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .18f)))
+            Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .22f)))
         } else {
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .32f)))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(.04f), Color.Transparent, Color.Black.copy(.42f)))))
         }
 
         Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+                .padding(horizontal = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 13.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("GLASS HOME", color = Color.White.copy(alpha = .68f), fontSize = 11.sp, letterSpacing = 2.1.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.SansSerif)
-                Text("✧", color = Color.White, fontSize = 25.sp, modifier = Modifier.clip(CircleShape).clickable { onCustomize(true) }.padding(7.dp))
+            // One UI-inspired top bar and large clock.
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("TUESDAY", color = Color.White.copy(.72f), fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold)
+                    Text(SimpleDateFormat("MMMM d", Locale.getDefault()).format(date),
+                        color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                }
+                GlassCircleButton("✧", "Personalize") { onCustomize(true) }
+                Spacer(Modifier.width(9.dp))
+                GlassCircleButton("⋮", "Home menu") { onCustomize(true) }
             }
 
-            Spacer(Modifier.height(31.dp))
-            Text(SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(date), color = Color.White.copy(alpha = .9f), fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.SansSerif)
-            Text(SimpleDateFormat("h:mm", Locale.getDefault()).format(date), color = Color.White, fontSize = 76.sp, fontWeight = FontWeight.ExtraLight, letterSpacing = (-3).sp, fontFamily = FontFamily.SansSerif)
+            Spacer(Modifier.height(24.dp))
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                Text(SimpleDateFormat("h:mm", Locale.getDefault()).format(date),
+                    color = Color.White, fontSize = 72.sp, lineHeight = 76.sp,
+                    fontWeight = FontWeight.Light, letterSpacing = (-3).sp)
+                Text(SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(date),
+                    color = Color.White.copy(.78f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
 
-            AnimatedVisibility(
-                visible = showDrawer,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 12 }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 12 })
-            ) {
-                Column(Modifier.fillMaxSize()) {
-                    Text("Your apps", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 13.dp))
-                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .16f)).padding(horizontal = 15.dp, vertical = 13.dp)) {
-                        if (query.isEmpty()) Text("Search your apps", color = Color.White.copy(alpha = .62f), fontSize = 14.sp)
-                        BasicTextField(value = query, onValueChange = onQuery, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp, fontFamily = FontFamily.SansSerif), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(22.dp))
+            // Glanceable One UI-style information cards.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassInfoCard(Modifier.weight(1.15f), "☀", "Weather", "Add weather widget") {
+                    onCustomize(true)
+                }
+                GlassInfoCard(Modifier.weight(.85f), "▦", "Calendar", SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(date)) {
+                    onCustomize(true)
+                }
+            }
+
+            if (showDrawer) {
+                Column(Modifier.fillMaxSize().padding(top = 20.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Apps", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("Done", color = Color.White.copy(.85f), fontSize = 14.sp,
+                            modifier = Modifier.clickable { onDrawerChange(false) }.padding(8.dp))
                     }
-                    val filtered = remember(apps, query) { apps.filter { it.label.contains(query.trim(), true) } }
+                    Spacer(Modifier.height(13.dp))
+                    GlassSearchField(query, onQuery, "Search apps")
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(columns),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 20.dp, bottom = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        contentPadding = PaddingValues(top = 18.dp, bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         items(filtered, key = { it.packageName }) { app -> AppTile(app, compact, onLaunch) }
                     }
                 }
-            }
-
-            if (!showDrawer) {
-                Spacer(Modifier.weight(1f))
-                val shortcuts = remember(apps) { chooseDockApps(apps) }
-                Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    shortcuts.forEach { AppTile(it, compact, onLaunch, showLabel = true) }
+            } else {
+                Spacer(Modifier.height(23.dp))
+                GlassSearchField(query, onQuery, "Search")
+                Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (activePage == 0) "Favourites" else "Everyday apps",
+                        color = Color.White.copy(.9f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Edit", color = Color.White.copy(.75f), fontSize = 12.sp,
+                        modifier = Modifier.clickable { onCustomize(true) }.padding(5.dp))
                 }
-                Text("Swipe up to explore", color = Color.White.copy(alpha = .68f), fontSize = 12.sp, letterSpacing = .3.sp, modifier = Modifier.padding(bottom = 8.dp))
+                Spacer(Modifier.height(12.dp))
+                val pageApps = if (activePage == 0) shortcuts else apps.take(8)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    userScrollEnabled = false,
+                    contentPadding = PaddingValues(vertical = 3.dp),
+                    verticalArrangement = Arrangement.spacedBy(17.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    items(pageApps, key = { it.packageName }) { app -> AppTile(app, compact, onLaunch) }
+                }
+                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.Center) {
+                    repeat(2) { index ->
+                        Box(Modifier.padding(horizontal = 4.dp).size(if (activePage == index) 7.dp else 5.dp)
+                            .clip(CircleShape).background(Color.White.copy(if (activePage == index) .95f else .4f))
+                            .clickable { activePage = index })
+                    }
+                }
+                Text("Swipe up for all apps", color = Color.White.copy(.64f), fontSize = 11.sp,
+                    modifier = Modifier.padding(bottom = 7.dp))
             }
         }
 
         if (showCustomize) {
             CustomizePanel(
-                selectedPreset = preset,
-                columns = columns,
-                compact = compact,
-                onClose = { onCustomize(false) },
-                onPreset = onPreset,
-                onPickPhoto = onPickPhoto,
-                onColumns = onColumns,
-                onCompact = onCompact
+                selectedPreset = preset, columns = columns, compact = compact,
+                onClose = { onCustomize(false) }, onPreset = onPreset,
+                onPickPhoto = onPickPhoto, onColumns = onColumns, onCompact = onCompact
             )
         }
+    }
+}
+
+@Composable
+private fun GlassCircleButton(symbol: String, description: String, onClick: () -> Unit) {
+    Box(Modifier.size(39.dp).clip(CircleShape).background(Color.White.copy(.16f))
+        .clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(symbol, color = Color.White, fontSize = 20.sp)
+    }
+}
+
+@Composable
+private fun GlassInfoCard(modifier: Modifier, symbol: String, title: String, subtitle: String, onClick: () -> Unit) {
+    Column(modifier.height(83.dp).clip(RoundedCornerShape(21.dp))
+        .background(Color.White.copy(.13f)).clickable(onClick = onClick).padding(13.dp),
+        verticalArrangement = Arrangement.SpaceBetween) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(symbol, color = Color.White, fontSize = 16.sp)
+            Spacer(Modifier.width(7.dp))
+            Text(title, color = Color.White.copy(.9f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Text(subtitle, color = Color.White.copy(.72f), fontSize = 10.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun GlassSearchField(value: String, onValue: (String) -> Unit, hint: String) {
+    Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(18.dp))
+        .background(Color.White.copy(.16f)).padding(horizontal = 15.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text("⌕", color = Color.White.copy(.8f), fontSize = 23.sp)
+        Spacer(Modifier.width(10.dp))
+        Box(Modifier.weight(1f)) {
+            if (value.isEmpty()) Text(hint, color = Color.White.copy(.62f), fontSize = 13.sp)
+            BasicTextField(value, onValue, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
+                modifier = Modifier.fillMaxWidth())
+        }
+        if (value.isNotEmpty()) Text("×", color = Color.White, modifier = Modifier.clickable { onValue("") })
     }
 }
 
@@ -398,71 +473,119 @@ private fun CustomizePanel(
     onColumns: (Int) -> Unit,
     onCompact: (Boolean) -> Unit
 ) {
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .48f)), contentAlignment = Alignment.BottomCenter) {
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                .background(Color(0xF21A2331)).padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 30.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("Personalize", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Make this home screen yours", color = Color.White.copy(alpha = .62f), fontSize = 13.sp)
+    var selectedMenu by remember { mutableStateOf("Home screen") }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(.48f)), contentAlignment = Alignment.BottomCenter) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.82f)
+            .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+            .background(Color(0xF21B2430)).padding(horizontal = 21.dp, vertical = 17.dp)) {
+            Box(Modifier.width(38.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(.28f)).align(Alignment.CenterHorizontally))
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Home settings", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Make your home screen yours", color = Color.White.copy(.58f), fontSize = 12.sp)
                 }
-                Text("Done", color = Color(0xFFB9D9FF), fontSize = 14.sp, modifier = Modifier.clickable(onClick = onClose).padding(8.dp))
+                Text("Done", color = Color(0xFFBBD8FF), modifier = Modifier.clickable(onClick = onClose).padding(8.dp))
             }
-            Spacer(Modifier.height(20.dp))
-            Text("WALLPAPER", color = Color.White.copy(alpha = .6f), fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(11.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                wallpaperPresets.forEachIndexed { index, item ->
-                    Column(Modifier.weight(1f).clickable { onPreset(index) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(13.dp))
-                                .background(Brush.verticalGradient(item.colors)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (selectedPreset == index) Text("✓", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Text(item.name, color = Color.White.copy(alpha = .8f), fontSize = 9.sp, maxLines = 1)
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                listOf("Home screen", "Wallpaper", "Apps", "About").forEach { item ->
+                    val active = selectedMenu == item
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(13.dp))
+                        .background(if (active) Color.White.copy(.19f) else Color.White.copy(.07f))
+                        .clickable { selectedMenu = item }.padding(vertical = 11.dp),
+                        contentAlignment = Alignment.Center) {
+                        Text(item, color = Color.White.copy(if (active) 1f else .65f), fontSize = 10.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
-            OutlinedButton(onClick = onPickPhoto, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
-                Text("Choose a photo from gallery")
-            }
             Spacer(Modifier.height(19.dp))
-            Text("APP DRAWER", color = Color.White.copy(alpha = .6f), fontSize = 10.sp, letterSpacing = 1.8.sp, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                listOf(4, 5).forEach { count ->
-                    FilterChip(selected = columns == count, onClick = { onColumns(count) }, label = { Text("$count columns") })
+            when (selectedMenu) {
+                "Wallpaper" -> {
+                    Text("WALLPAPER COLLECTION", color = Color.White.copy(.55f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(13.dp))
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(wallpaperPresets.chunked(2)) { pair ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                pair.forEach { item ->
+                                    val index = wallpaperPresets.indexOf(item)
+                                    Column(Modifier.weight(1f).clickable { onPreset(index) }) {
+                                        Box(Modifier.fillMaxWidth().height(105.dp).clip(RoundedCornerShape(17.dp))
+                                            .background(Brush.verticalGradient(item.colors)), contentAlignment = Alignment.Center) {
+                                            if (selectedPreset == index) Text("✓", color = Color.White, fontSize = 25.sp)
+                                        }
+                                        Text(item.name, color = Color.White.copy(.84f), fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick = onPickPhoto, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) { Text("Choose from Gallery") }
                 }
-                FilterChip(selected = compact, onClick = { onCompact(!compact) }, label = { Text("Compact icons") })
+                "Home screen" -> {
+                    Text("HOME SCREEN GRID", color = Color.White.copy(.55f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        listOf(4, 5).forEach { count ->
+                            FilterChip(selected = columns == count, onClick = { onColumns(count) }, label = { Text("$count columns") })
+                        }
+                    }
+                    SettingsRow("Home screen layout", "4 × 5 app grid", "▦")
+                    SettingsRow("Swipe up", "Open the app drawer", "↑")
+                    SettingsRow("Page indicator", "Show home pages", "••")
+                    SettingsRow("Dock background", "Liquid Glass", "◉")
+                }
+                "Apps" -> {
+                    Text("APP DRAWER", color = Color.White.copy(.55f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
+                    SettingsRow("App drawer columns", "$columns columns", "▦")
+                    SettingsRow("Icon labels", "App names below icons", "Aa")
+                    SettingsRow("Icon size", if (compact) "Compact" else "Standard", "◫")
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !compact, onClick = { onCompact(false) }, label = { Text("Standard icons") })
+                        FilterChip(selected = compact, onClick = { onCompact(true) }, label = { Text("Compact icons") })
+                    }
+                }
+                else -> {
+                    Text("GLASS HOME", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("A native Android home experience with refractive Liquid Glass rendering.",
+                        color = Color.White.copy(.7f), fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    SettingsRow("Rendering", "QmDeve AGSL LiquidGlassView", "✧")
+                    SettingsRow("Device", "Optimized for Galaxy S22+", "▣")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun DockContent(apps: List<LaunchApp>, onLaunch: (LaunchApp) -> Unit, onDrawer: () -> Unit) {
-    Row(
-        Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        apps.take(4).forEach { app ->
-            Image(bitmap = app.icon, contentDescription = app.label, modifier = Modifier.size(55.dp).clip(RoundedCornerShape(17.dp)).clickable { onLaunch(app) })
+private fun SettingsRow(title: String, summary: String, symbol: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(.1f)), contentAlignment = Alignment.Center) {
+            Text(symbol, color = Color.White, fontSize = 16.sp)
         }
-        Box(
-            Modifier.size(53.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .13f)).clickable(onClick = onDrawer),
-            contentAlignment = Alignment.Center
-        ) {
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(summary, color = Color.White.copy(.55f), fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun DockContent(apps: List<LaunchApp>, onLaunch: (LaunchApp) -> Unit, onDrawer: () -> Unit) {
+    Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        apps.take(4).forEach { app ->
+            Image(app.icon, app.label, Modifier.size(54.dp).clip(RoundedCornerShape(17.dp)).clickable { onLaunch(app) })
+        }
+        Box(Modifier.size(53.dp).clip(CircleShape).background(Color.White.copy(.17f)).clickable(onClick = onDrawer),
+            contentAlignment = Alignment.Center) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                repeat(3) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        repeat(3) { Box(Modifier.size(4.dp).background(Color.White, CircleShape)) }
-                    }
-                }
+                repeat(3) { Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(3) { Box(Modifier.size(4.dp).background(Color.White, CircleShape)) }
+                } }
             }
         }
     }
