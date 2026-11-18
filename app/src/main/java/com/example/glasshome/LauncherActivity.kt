@@ -264,7 +264,7 @@ private fun createLauncherHost(
         )
     }
     host.dockCompose.setContent {
-        DockContent(apps = dockApps, onLaunch = onLaunch, onDrawer = {
+        DockContent(apps = chooseDockApps(apps.value), onLaunch = onLaunch, onDrawer = {
             showDrawer.value = !showDrawer.value
             query.value = ""
         })
@@ -297,14 +297,13 @@ private fun HomeContent(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.linearGradient(presetColors, start = androidx.compose.ui.geometry.Offset.Zero, end = androidx.compose.ui.geometry.Offset(900f, 1600f)))
-            .pointerInput(showDrawer) {
+            .then(if (!showDrawer) Modifier.pointerInput(Unit) {
                 var drag = 0f
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, amount ->
                         drag += amount
-                        if (abs(drag) > 76f) {
-                            if (!showDrawer && drag < 0f) onDrawerChange(true)
-                            if (showDrawer && drag > 0f) onDrawerChange(false)
+                        if (abs(drag) > 76f && drag < 0f) {
+                            onDrawerChange(true)
                             drag = 0f
                             change.consume()
                         }
@@ -312,7 +311,7 @@ private fun HomeContent(
                     onDragEnd = { drag = 0f },
                     onDragCancel = { drag = 0f }
                 )
-            }
+            } else Modifier)
     ) {
         if (photo != null) {
             Image(bitmap = photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
