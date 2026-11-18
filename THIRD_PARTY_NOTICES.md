@@ -2,11 +2,10 @@
 
 ## AndroidLiquidGlassView
 
-Glass Home uses the AndroidLiquidGlassView library by Donny Yang (QmDeve):
+Glass Home vendors the AndroidLiquidGlassView source by Donny Yang (QmDeve):
 https://github.com/QmDeve/AndroidLiquidGlassView
 
-Maven coordinate: com.qmdeve.liquidglass:core:1.1.0
-License: MIT License
+Upstream project license: MIT License. The Java implementation and AGSL shader are retained with their upstream copyright and license headers. The vendored Java source has two compatibility adjustments for this app's stable Android SDK/JDK toolchain: the generated resource import points to the app module's R class, and Java 21 Math.clamp calls are expressed with equivalent Math.max/Math.min operations for JDK 17.
 
 Copyright (c) 2025-2026 Donny Yang
 
