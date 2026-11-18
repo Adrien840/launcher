@@ -184,9 +184,9 @@ private class GlassLauncherHost(context: Context) : FrameLayout(context) {
         addView(contentLayer, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         contentLayer.addView(contentCompose, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
-        glassDock.setCornerRadius(dp(42f))
-        glassDock.setRefractionHeight(dp(30f))
-        glassDock.setRefractionOffset(dp(72f))
+        glassDock.setCornerRadius(dp(42f).toFloat())
+        glassDock.setRefractionHeight(dp(30f).toFloat())
+        glassDock.setRefractionOffset(dp(72f).toFloat())
         glassDock.setDispersion(0.88f)
         glassDock.setBlurRadius(0.45f)
         glassDock.setTintAlpha(0.025f)
