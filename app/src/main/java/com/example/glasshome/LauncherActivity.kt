@@ -306,7 +306,7 @@ private fun GlassDock(
 ) {
     val density = LocalDensity.current
     val radius = with(density) { 30.dp.toPx() }
-    val edgeWidth = with(density) { 17.dp.toPx() }
+    val edgeWidth = with(density) { 25.dp.toPx() }
     val refraction = with(density) { 17.dp.toPx() }
     var dockOrigin by remember { mutableStateOf(Offset.Zero) }
 
@@ -348,7 +348,7 @@ private fun GlassDock(
                 shader.setFloatUniform("cornerRadius", radius)
                 shader.setFloatUniform("edgeWidth", edgeWidth)
                 shader.setFloatUniform("refraction", refraction)
-                shader.setFloatUniform("chroma", 5.5f)
+                shader.setFloatUniform("chroma", 8.0f)
                 val paint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
                 native.drawRoundRect(rect, radius, radius, paint)
             } else {
@@ -360,17 +360,17 @@ private fun GlassDock(
 
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = .17f), Color.White.copy(alpha = .035f), Color.Black.copy(alpha = .12f))
+                    listOf(Color.White.copy(alpha = .10f), Color.White.copy(alpha = .015f), Color.Black.copy(alpha = .045f))
                 ),
                 cornerRadius = CornerRadius(radius)
             )
             drawRoundRect(
-                color = Color.White.copy(alpha = .46f),
+                color = Color.White.copy(alpha = .62f),
                 cornerRadius = CornerRadius(radius),
                 style = Stroke(width = 1.dp.toPx())
             )
             drawLine(
-                color = Color.White.copy(alpha = .38f),
+                color = Color.White.copy(alpha = .52f),
                 start = Offset(size.width * .19f, 1.dp.toPx()),
                 end = Offset(size.width * .81f, 1.dp.toPx()),
                 strokeWidth = 1.dp.toPx()
@@ -450,10 +450,18 @@ half4 main(float2 p) {
 
     half3 prism = half3(redSample.r, greenSample.g, blueSample.b);
     half3 tint = half3(0.78, 0.86, 0.98);
-    half3 glassColor = mix(prism, tint, 0.17);
-    float topGlint = (1.0 - smoothstep(0.0, 3.0, p.y)) * 0.20;
-    glassColor += half3(topGlint);
-    return half4(glassColor, 0.94);
+    // Keep the sampled wallpaper dominant; high alpha previously flattened
+    // the dock into an opaque grey slab on dark wallpapers.
+    half3 glassColor = mix(prism, tint, 0.07);
+
+    // Fresnel-like rim and restrained spectral edge highlights.
+    float edgeGlow = exp(-distanceInside / 3.2);
+    float innerRim = exp(-abs(distanceInside - 9.0) / 3.0);
+    float topGlint = (1.0 - smoothstep(0.0, 7.0, p.y)) * 0.30;
+    float lowerGlint = (1.0 - smoothstep(0.0, 5.0, dockSize.y - p.y)) * 0.12;
+    glassColor += half3(edgeGlow * 0.27 + innerRim * 0.08 + topGlint + lowerGlint);
+    glassColor += half3(0.035, 0.055, 0.095) * half(rim);
+    return half4(glassColor, 0.66);
 }
 """
 
