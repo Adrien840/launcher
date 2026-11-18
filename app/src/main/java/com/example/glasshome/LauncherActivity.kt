@@ -294,19 +294,27 @@ private fun HomeContent(
     onCompact: (Boolean) -> Unit
 ) {
     val presetColors = wallpaperPresets[preset.coerceIn(wallpaperPresets.indices)].colors
-    val shortcuts = remember(apps) { chooseDockApps(apps) }
     val filtered = remember(apps, query) { apps.filter { it.label.contains(query.trim(), true) } }
+    val folders = remember(apps) {
+        listOf(
+            "Samsung" to listOf("samsung", "galaxy", "one ui"),
+            "Google" to listOf("google", "gmail", "youtube", "maps", "chrome"),
+            "Social" to listOf("instagram", "facebook", "messenger", "snapchat", "discord", "tiktok"),
+            "Media" to listOf("spotify", "music", "netflix", "photos", "gallery")
+        ).map { (name, keys) -> name to apps.filter { app -> keys.any { key -> app.label.contains(key, true) || app.packageName.contains(key, true) } }.distinctBy { it.packageName }.take(9) }
+            .filter { it.second.isNotEmpty() }
+    }
+    var selectedFolder by remember { mutableStateOf<Pair<String, List<LaunchApp>>?>(null) }
     var activePage by remember { mutableIntStateOf(0) }
 
     Box(
-        Modifier.fillMaxSize()
-            .background(Brush.linearGradient(presetColors))
-            .then(if (!showDrawer) Modifier.pointerInput(Unit) {
+        Modifier.fillMaxSize().background(Brush.linearGradient(presetColors))
+            .then(if (!showDrawer) Modifier.pointerInput(showDrawer) {
                 var drag = 0f
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, amount ->
                         drag += amount
-                        if (drag < -65f) {
+                        if (drag < -72f) {
                             onDrawerChange(true)
                             drag = 0f
                             change.consume()
@@ -322,8 +330,8 @@ private fun HomeContent(
                     detectHorizontalDragGestures(
                         onHorizontalDrag = { change, amount ->
                             dragX += amount
-                            if (dragX < -70f) { activePage = 1; dragX = 0f; change.consume() }
-                            if (dragX > 70f) { activePage = 0; dragX = 0f; change.consume() }
+                            if (dragX < -72f) { activePage = 1; dragX = 0f; change.consume() }
+                            if (dragX > 72f) { activePage = 0; dragX = 0f; change.consume() }
                         },
                         onDragEnd = { dragX = 0f },
                         onDragCancel = { dragX = 0f }
@@ -333,107 +341,202 @@ private fun HomeContent(
     ) {
         if (photo != null) {
             Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .22f)))
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
         } else {
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(.04f), Color.Transparent, Color.Black.copy(.42f)))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(.05f), Color.Transparent, Color.Black.copy(.46f)))))
         }
 
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-                .padding(horizontal = 22.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 9.dp, bottom = 124.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // One UI-inspired top bar and large clock.
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Compact One UI-style greeting and customization controls.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("TUESDAY", color = Color.White.copy(.72f), fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold)
+                    Text(SimpleDateFormat("EEEE", Locale.getDefault()).format(date).uppercase(Locale.getDefault()),
+                        color = Color.White.copy(.68f), fontSize = 10.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.SemiBold)
                     Text(SimpleDateFormat("MMMM d", Locale.getDefault()).format(date),
-                        color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                        color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Medium, letterSpacing = (-.4).sp)
                 }
                 GlassCircleButton("✧", "Personalize") { onCustomize(true) }
-                Spacer(Modifier.width(9.dp))
+                Spacer(Modifier.width(8.dp))
                 GlassCircleButton("⋮", "Home menu") { onCustomize(true) }
             }
 
-            Spacer(Modifier.height(24.dp))
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                Text(SimpleDateFormat("h:mm", Locale.getDefault()).format(date),
-                    color = Color.White, fontSize = 72.sp, lineHeight = 76.sp,
-                    fontWeight = FontWeight.Light, letterSpacing = (-3).sp)
-                Text(SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(date),
-                    color = Color.White.copy(.78f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(17.dp))
+
+            // Two large glance cards, following One UI's rounded widget language.
+            Row(Modifier.fillMaxWidth().height(142.dp), horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                CalendarWidget(Modifier.weight(1.12f), date)
+                WeatherWidget(Modifier.weight(.88f), onClick = { onCustomize(true) })
             }
 
-            Spacer(Modifier.height(22.dp))
-            // Glanceable One UI-style information cards.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GlassInfoCard(Modifier.weight(1.15f), "☀", "Weather", "Add weather widget") {
-                    onCustomize(true)
-                }
-                GlassInfoCard(Modifier.weight(.85f), "▦", "Calendar", SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(date)) {
-                    onCustomize(true)
+            Spacer(Modifier.height(18.dp))
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("FOLDERS", color = Color.White.copy(.62f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("Edit", color = Color.White.copy(.75f), fontSize = 11.sp, modifier = Modifier.clickable { onCustomize(true) }.padding(5.dp))
+            }
+            Spacer(Modifier.height(9.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                folders.take(4).forEach { (name, items) ->
+                    FolderTile(name, items, Modifier.weight(1f)) { selectedFolder = name to items }
                 }
             }
+
+            Spacer(Modifier.height(18.dp))
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (activePage == 0) "Apps" else "More apps", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("All apps  ›", color = Color.White.copy(.75f), fontSize = 11.sp,
+                    modifier = Modifier.clickable { onDrawerChange(true) }.padding(5.dp))
+            }
+            Spacer(Modifier.height(9.dp))
 
             if (showDrawer) {
-                Column(Modifier.fillMaxWidth().weight(1f).padding(top = 20.dp)) {
+                Column(Modifier.fillMaxWidth().weight(1f)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Apps", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        Text("Done", color = Color.White.copy(.85f), fontSize = 14.sp,
+                        Text("All apps", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("Done", color = Color.White.copy(.85f), fontSize = 13.sp,
                             modifier = Modifier.clickable { onDrawerChange(false) }.padding(8.dp))
                     }
-                    Spacer(Modifier.height(13.dp))
+                    Spacer(Modifier.height(10.dp))
                     GlassSearchField(query, onQuery, "Search apps")
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(columns),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 18.dp, bottom = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(18.dp),
                         horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         items(filtered, key = { it.packageName }) { app -> AppTile(app, compact, onLaunch) }
                     }
                 }
             } else {
-                Spacer(Modifier.height(23.dp))
-                GlassSearchField(query, onQuery, "Search")
-                Spacer(Modifier.height(20.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (activePage == 0) "Favourites" else "Everyday apps",
-                        color = Color.White.copy(.9f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Edit", color = Color.White.copy(.75f), fontSize = 12.sp,
-                        modifier = Modifier.clickable { onCustomize(true) }.padding(5.dp))
-                }
-                Spacer(Modifier.height(12.dp))
-                val pageApps = if (activePage == 0) (shortcuts + apps.filter { app -> shortcuts.none { it.packageName == app.packageName } }.take(4)) else apps.drop(8).take(8)
+                val pageApps = if (activePage == 0) apps.filter { app -> folders.none { (_, group) -> group.any { it.packageName == app.packageName } } }.take(10)
+                    else apps.filter { app -> folders.none { (_, group) -> group.any { it.packageName == app.packageName } } }.drop(10).take(10)
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
+                    columns = GridCells.Fixed(5),
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     userScrollEnabled = false,
-                    contentPadding = PaddingValues(vertical = 3.dp),
-                    verticalArrangement = Arrangement.spacedBy(17.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    contentPadding = PaddingValues(top = 2.dp, bottom = 5.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     items(pageApps, key = { it.packageName }) { app -> AppTile(app, compact, onLaunch) }
                 }
-                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.Center) {
+                Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.Center) {
                     repeat(2) { index ->
-                        Box(Modifier.padding(horizontal = 4.dp).size(if (activePage == index) 7.dp else 5.dp)
-                            .clip(CircleShape).background(Color.White.copy(if (activePage == index) .95f else .4f))
+                        Box(Modifier.padding(horizontal = 4.dp).size(if (activePage == index) 6.dp else 5.dp)
+                            .clip(CircleShape).background(Color.White.copy(if (activePage == index) .95f else .38f))
                             .clickable { activePage = index })
                     }
                 }
-                Text("Swipe up for all apps", color = Color.White.copy(.64f), fontSize = 11.sp,
-                    modifier = Modifier.padding(bottom = 7.dp))
             }
         }
 
+        if (selectedFolder != null) {
+            FolderDialog(selectedFolder!!.first, selectedFolder!!.second, onLaunch) { selectedFolder = null }
+        }
         if (showCustomize) {
             CustomizePanel(
                 selectedPreset = preset, columns = columns, compact = compact,
                 onClose = { onCustomize(false) }, onPreset = onPreset,
                 onPickPhoto = onPickPhoto, onColumns = onColumns, onCompact = onCompact
             )
+        }
+    }
+}
+
+@Composable
+private fun CalendarWidget(modifier: Modifier, date: Date) {
+    val calendar = java.util.Calendar.getInstance().apply { time = date }
+    val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    Column(modifier.fillMaxHeight().clip(RoundedCornerShape(24.dp))
+        .background(Color.Black.copy(.24f)).padding(horizontal = 13.dp, vertical = 12.dp)) {
+        Text(SimpleDateFormat("MMMM", Locale.getDefault()).format(date).uppercase(Locale.getDefault()),
+            color = Color.White.copy(.7f), fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            listOf("S","M","T","W","T","F","S").forEach {
+                Text(it, color = Color.White.copy(.48f), fontSize = 9.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        val firstDay = java.util.Calendar.getInstance().apply { time = date; set(java.util.Calendar.DAY_OF_MONTH, 1) }
+        val offset = firstDay.get(java.util.Calendar.DAY_OF_WEEK) - 1
+        val maxDay = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+        for (week in 0..4) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                for (weekday in 0..6) {
+                    val number = week * 7 + weekday - offset + 1
+                    Box(Modifier.weight(1f).height(17.dp), contentAlignment = Alignment.Center) {
+                        if (number in 1..maxDay) {
+                            Box(Modifier.size(if (number == day) 17.dp else 15.dp)
+                                .clip(CircleShape)
+                                .background(if (number == day) Color.White else Color.Transparent),
+                                contentAlignment = Alignment.Center) {
+                                Text(number.toString(), color = if (number == day) Color(0xFF253244) else Color.White.copy(.86f),
+                                    fontSize = 8.sp, fontWeight = if (number == day) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeatherWidget(modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.fillMaxHeight().clip(RoundedCornerShape(24.dp))
+        .background(Brush.linearGradient(listOf(Color.White.copy(.18f), Color.White.copy(.07f))))
+        .clickable(onClick = onClick).padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Text("WEATHER", color = Color.White.copy(.62f), fontSize = 9.sp, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+        Text("☀", color = Color.White, fontSize = 31.sp, lineHeight = 34.sp)
+        Column {
+            Text("Weather", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+            Text("Tap to personalize", color = Color.White.copy(.65f), fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun FolderTile(name: String, apps: List<LaunchApp>, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Color.White.copy(.12f))
+        .clickable(onClick = onClick).padding(vertical = 9.dp, horizontal = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.height(35.dp), contentAlignment = Alignment.Center) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                apps.take(3).chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        row.forEach { app ->
+                            Image(app.icon, app.label, Modifier.size(15.dp).clip(RoundedCornerShape(4.dp)))
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(name, color = Color.White.copy(.92f), fontSize = 9.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun FolderDialog(name: String, apps: List<LaunchApp>, onLaunch: (LaunchApp) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(27.dp))
+            .background(Color(0xF226303C)).padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("Done", color = Color(0xFFBBD8FF), modifier = Modifier.clickable(onClick = onDismiss).padding(6.dp))
+            }
+            Spacer(Modifier.height(15.dp))
+            LazyVerticalGrid(columns = GridCells.Fixed(3), contentPadding = PaddingValues(4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(apps, key = { it.packageName }) { app -> AppTile(app, false, onLaunch) }
+            }
         }
     }
 }
