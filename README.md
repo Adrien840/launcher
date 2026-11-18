@@ -1,27 +1,29 @@
 # Glass Home 2.0
 
-A native Android launcher for Android 13+ with a real refraction/dispersion dock powered by [AndroidLiquidGlassView](https://github.com/QmDeve/AndroidLiquidGlassView).
+A native Android launcher for Android 13+ with a real refractive dock powered by [QmDeve/AndroidLiquidGlassView](https://github.com/QmDeve/AndroidLiquidGlassView).
 
 ## Features
-- Real-time Liquid Glass sampling from the launcher content using QmDeve's LiquidGlassView (not a decorative translucent overlay).
-- Up-swipe from the home screen to open the app drawer; down-swipe to return.
-- Searchable installed-app drawer and native app icons.
-- Seven built-in gradient wallpapers plus photo selection from the gallery.
-- Persistent wallpaper selection, app-drawer column count (4/5), and compact icon preference.
+- Real Liquid Glass sampling from the launcher content behind the dock, using QmDeve's AGSL/RenderEffect pipeline.
+- Swipe up on the home screen to open the app drawer.
+- Searchable installed-app drawer with native app icons.
+- Seven built-in gradient wallpapers and gallery photo selection.
+- Persistent wallpaper, app-drawer column count (4/5), and compact-icon preference.
 - SF-inspired typography using Android's native sans-serif family; no proprietary Apple font files are redistributed.
-- Glass dock with Phone, Messages, Browser, Camera shortcuts and app-drawer control.
+- Floating dock with Phone, Messages, Browser, Camera shortcuts and app-drawer control.
 
 ## Build
 - Android Studio, JDK 17, Android SDK Platform 35.
 - Open this repository and build the `app` debug variant.
-- Minimum SDK 33 (Android 13), required by the library for full Liquid Glass rendering.
-- Dependency: `com.qmdeve.liquidglass:core:1.1.0` from Maven Central.
-- On the S22+ (Android 13+), set Glass Home as the default Home app in Settings → Apps → Choose default apps → Home app.
+- Minimum SDK 33 (Android 13), required for the full liquid-glass rendering pipeline.
+- The QmDeve library source is vendored under `app/src/main/java/com/qmdeve/liquidglass` and its AGSL shader is under `app/src/main/res/raw`. This avoids requiring the upstream AAR's Android API 37 compile SDK metadata; the engine uses Android 13+ rendering APIs.
+- Set Glass Home as the default Home app in Settings → Apps → Choose default apps → Home app.
 
 ## How the glass works
-The dock is a real `com.qmdeve.liquidglass.widget.LiquidGlassView`. Its sampling source is the launcher content container behind it. The library applies its AGSL/RenderEffect pipeline for refractive distortion, chromatic dispersion and configurable tint/blur. The earlier hand-written shader has been removed.
+The dock is a real `com.qmdeve.liquidglass.widget.LiquidGlassView`. It binds to the launcher content container behind it and uses the upstream AGSL shader with Android RenderEffect/RenderNode to refract and disperse the sampled background. The earlier hand-written approximation has been removed.
+
+## Customization
+Tap the sparkle icon in the top-right corner to select a built-in gradient or a photo from the gallery. The same panel changes app-drawer columns and icon density.
 
 ## Limitations
-- Android launcher shortcuts and widgets are not implemented yet.
-- App drawer supports search and a 4/5-column preference.
-- Photo wallpapers are read through a persisted gallery URI.
+- Android launcher widgets, notification badges, folders, and drag-to-rearrange shortcuts are not implemented yet.
+- The gallery image is used as the home wallpaper and the Liquid Glass view samples the rendered launcher content behind the dock.
