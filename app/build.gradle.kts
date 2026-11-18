@@ -10,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.glasshome"
-        minSdk = 28
+        minSdk = 33
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     buildFeatures { compose = true }
@@ -32,8 +32,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-viewbinding")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("com.qmdeve.liquidglass:core:1.1.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
