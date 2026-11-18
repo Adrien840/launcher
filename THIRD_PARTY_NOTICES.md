@@ -1,15 +1,14 @@
 # Third-party notices
 
-## Liquid Glass optical reference
+## AndroidLiquidGlassView
 
-The refraction approach in this project is informed by deepika-builds/liquid-glass:
-https://github.com/deepika-builds/liquid-glass
+Glass Home uses the AndroidLiquidGlassView library by Donny Yang (QmDeve):
+https://github.com/QmDeve/AndroidLiquidGlassView
 
-The upstream project is Copyright (c) 2026 Deepika Rao and is distributed under the MIT License. Glass Home uses an independent Android AGSL adaptation of the disclosed displacement-map and channel-separation approach; it does not bundle the upstream JavaScript or SVG filter code.
+Maven coordinate: com.qmdeve.liquidglass:core:1.1.0
+License: MIT License
 
-MIT License
-
-Copyright (c) 2026 Deepika Rao
+Copyright (c) 2025-2026 Donny Yang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
