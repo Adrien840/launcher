@@ -22,6 +22,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -315,6 +316,20 @@ private fun HomeContent(
                     onDragCancel = { drag = 0f }
                 )
             } else Modifier)
+            .pointerInput(showDrawer, activePage) {
+                if (!showDrawer) {
+                    var dragX = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, amount ->
+                            dragX += amount
+                            if (dragX < -70f) { activePage = 1; dragX = 0f; change.consume() }
+                            if (dragX > 70f) { activePage = 0; dragX = 0f; change.consume() }
+                        },
+                        onDragEnd = { dragX = 0f },
+                        onDragCancel = { dragX = 0f }
+                    )
+                }
+            }
     ) {
         if (photo != null) {
             Image(photo, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
@@ -361,7 +376,7 @@ private fun HomeContent(
             }
 
             if (showDrawer) {
-                Column(Modifier.fillMaxSize().padding(top = 20.dp)) {
+                Column(Modifier.fillMaxWidth().weight(1f).padding(top = 20.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("Apps", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                         Text("Done", color = Color.White.copy(.85f), fontSize = 14.sp,
@@ -390,7 +405,7 @@ private fun HomeContent(
                         modifier = Modifier.clickable { onCustomize(true) }.padding(5.dp))
                 }
                 Spacer(Modifier.height(12.dp))
-                val pageApps = if (activePage == 0) shortcuts else apps.take(8)
+                val pageApps = if (activePage == 0) (shortcuts + apps.filter { app -> shortcuts.none { it.packageName == app.packageName } }.take(4)) else apps.drop(8).take(8)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier.fillMaxWidth().weight(1f),
@@ -504,7 +519,7 @@ private fun CustomizePanel(
                 "Wallpaper" -> {
                     Text("WALLPAPER COLLECTION", color = Color.White.copy(.55f), fontSize = 10.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(13.dp))
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(wallpaperPresets.chunked(2)) { pair ->
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 pair.forEach { item ->
