@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.glasshome"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.glasshome"
@@ -35,6 +35,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("com.qmdeve.liquidglass:core:1.1.0")
+    implementation("androidx.annotation:annotation:1.9.1")
+    implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
